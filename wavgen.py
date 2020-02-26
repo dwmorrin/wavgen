@@ -7,10 +7,16 @@ import wave
 
 parser = argparse.ArgumentParser(
         description="Generate .wav file using direct digital synthesis")
+parser.add_argument('--delay', help="delay time",
+        dest='delay', type=float, default=0.2, action='store')
 parser.add_argument('-d', '--duration', help="duration of tone",
         dest='duration', type=float, default=1, action='store')
+parser.add_argument('--feedback', help="range 0.0 to 1.0, delay feedback",
+        dest='feedback', type=float, default=0.3, action='store')
 parser.add_argument('-f', '--frequency', help="audio frequency",
         dest='frequency', type=int, default=440, action='store')
+parser.add_argument('-l', '--loops', help="loops/repeats (depends on type)",
+        dest='loops', type=int, default=1, action='store')
 parser.add_argument('-o', '--output', help="output filename",
         dest='filename', default="tone.wav", action='store')
 parser.add_argument('-r', '--rate', help="sample rate",
@@ -21,12 +27,15 @@ parser.add_argument('-t', '--type', help="tone|constant|scale|slope|two-tone|two
         dest='type', default='tone', action='store')
 args = parser.parse_args()
 
+if args.feedback < 0.0 or args.feedback > 1.0:
+    raise ValueError(str(args.feedback) + ' is beyond 0.0 to 1.0 range')
+
 MAX_VALUE = 32767
 
 def byte16(int):
     """ formats signed 16 bit int to 2x 8 bits """
     if int > MAX_VALUE or int < -MAX_VALUE:
-        raise ValueError
+        raise ValueError(str(int) + ' is beyond signed 16 bit range')
     return pack("<h", int)
 
 def scale(x, amplitude=0.5, master=0.8):
@@ -115,7 +124,7 @@ def two_tone_ionian(sample_rate, frequency, duration):
     return samples
 
 # effects/filters
-def delay(samples, sample_rate, time):
+def delay(samples, sample_rate, time, feedback=0):
     """ returns a list of samples, same length as input """
     sample_delay = int(sample_rate * time)
     delay_ring = [0 for i in range(sample_delay)]
@@ -123,15 +132,15 @@ def delay(samples, sample_rate, time):
     mix = samples[:]
     for i in range(len(mix)):
         playback_head = (record_head + 1) % sample_delay 
-        delay_ring[record_head] = mix[i]
+        delay_ring[record_head] = mix[i] + int(delay_ring[playback_head] * feedback)
         mix[i] += delay_ring[playback_head]
         mix[i] //= 2
         record_head = playback_head
     return mix
 
-def delay_test(sample_rate):
-    test = ionian(sample_rate, 2, 440, 0.4)
-    return delay(test, sample_rate, 0.5)
+def delay_test(sample_rate, loops, start_frequency, note_duration, delay_time, feedback):
+    test = ionian(sample_rate, loops, start_frequency, note_duration)
+    return delay(test, sample_rate, delay_time, feedback)
 
 wav_file = wave.open(args.filename, "wb")
 wav_file.setnchannels(1)
@@ -152,8 +161,9 @@ elif args.type == 'constant':
 elif args.type == 'slope':
     slope(wav_file, -MAX_VALUE, MAX_VALUE, 10)
 elif args.type == 'scale':
-    write_samples(wav_file, ionian(args.sample_rate, 2, args.frequency, 0.5))
+    write_samples(wav_file, ionian(args.sample_rate, args.loops, args.frequency, 0.5))
 elif args.type == 'delaytest':
-    write_samples(wav_file, delay_test(args.sample_rate))
+    write_samples(wav_file, delay_test(
+        args.sample_rate, args.loops, args.frequency, args.duration, args.delay, args.feedback))
 
 wav_file.close()
