@@ -17,7 +17,7 @@ parser.add_argument('-r', '--rate', help="sample rate",
         dest='sample_rate', type=int, default=44100, action='store')
 parser.add_argument('-w', '--waveform', help="sin|tri|saw|square",
         dest='waveform', default='sin', action='store')
-parser.add_argument('-t', '--type', help="tone|constant|scale|slope",
+parser.add_argument('-t', '--type', help="tone|constant|scale|slope|two-tone|two-tone-scale|delaytest",
         dest='type', default='tone', action='store')
 args = parser.parse_args()
 
@@ -76,7 +76,7 @@ def waveform(sample_rate, frequency, duration, func=sin, fade_in_duration=0.01, 
         samples.append(scale(func(sample*angle_rate), amplitude))
     return samples
 
-def ionian(sample_rate, loops, start_freq, note_duration):
+def ionian(sample_rate, loops, start_freq, note_duration, func=sin):
     """ returns list of samples playing an ionian (major) scale """
     semitone_ratio = 2**(1/12)
     skip = [1, 3, 6, 8, 10] # black keys
@@ -87,7 +87,7 @@ def ionian(sample_rate, loops, start_freq, note_duration):
             f *= semitone_ratio
             if i not in skip:
                 samples += waveform(
-                    sample_rate, f, note_duration, globals()[args.waveform])
+                    sample_rate, f, note_duration, func)
     return samples
 
 def slope(wav_write, start, stop, n_samples):
