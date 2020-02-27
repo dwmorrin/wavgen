@@ -65,14 +65,13 @@ def write_samples(wav_write, value_list):
     for sample in value_list:
         wav_write.writeframesraw(byte16(sample))
 
-def waveform(sample_rate, frequency, duration, func=sin, fade_in_duration=0.01, fade_out_duration=0.01):
+def waveform(sample_rate, frequency, duration, func=sin, fade_in_duration=0.01, fade_out_duration=0.01, fm_func=sin, fm_amp=0, fm_freq=8):
     """ returns a list of function values at a fixed frequency with fade in/out """
     n_samples = int(sample_rate * duration)
     n_fade_in_end = int(sample_rate * fade_in_duration)
     n_fade_out_samples = int(sample_rate * fade_out_duration)
     n_fade_out_start = n_samples - n_fade_out_samples
     
-    angle_rate = rads_per_sample(frequency, sample_rate)
     amplitude = 0.0
     fade_in_inc = 1/float(n_fade_in_end)
     fade_out_dec = 1/float(n_fade_out_samples)
@@ -82,7 +81,9 @@ def waveform(sample_rate, frequency, duration, func=sin, fade_in_duration=0.01, 
             amplitude += fade_in_inc
         if sample >= n_fade_out_start:
             amplitude -= fade_out_dec
-        samples.append(scale(func(sample*angle_rate), amplitude))
+        mod = fm_amp * fm_func(sample*fm_freq*2*pi/sample_rate)
+        f = frequency + mod
+        samples.append(scale(func(sample*f*2*pi/sample_rate), amplitude))
     return samples
 
 def ionian(sample_rate, loops, start_freq, note_duration, func=sin):
@@ -150,6 +151,9 @@ wav_file.setframerate(args.sample_rate)
 if args.type == 'tone':
     write_samples(wav_file,
            waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform]))
+elif args.type == 'vibrato':
+    write_samples(wav_file,
+           waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform], .01, .01, sin, .1, 8))
 elif args.type == 'two-tone':
     write_samples(wav_file,
            two_tone(args.sample_rate, args.frequency, args.duration, 5))
