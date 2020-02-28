@@ -8,24 +8,26 @@ import wave
 
 parser = argparse.ArgumentParser(
         description="Generate .wav file using direct digital synthesis")
+parser.add_argument('-c', '--channels', help="channel count",
+        type=int, default=1)
 parser.add_argument('--delay', help="delay time",
-        dest='delay', type=float, default=0.2, action='store')
+        type=float, default=0.2)
 parser.add_argument('-d', '--duration', help="duration of tone",
-        dest='duration', type=float, default=1, action='store')
+        type=float, default=1)
 parser.add_argument('--feedback', help="range 0.0 to 1.0, delay feedback",
-        dest='feedback', type=float, default=0.3, action='store')
+        type=float, default=0.3)
 parser.add_argument('-f', '--frequency', help="audio frequency",
-        dest='frequency', type=int, default=440, action='store')
+        type=int, default=440)
 parser.add_argument('-l', '--loops', help="loops/repeats (depends on type)",
-        dest='loops', type=int, default=1, action='store')
+        type=int, default=1)
 parser.add_argument('-o', '--output', help="output filename",
-        dest='filename', default="tone.wav", action='store')
+        dest='filename', default="tone.wav")
 parser.add_argument('-r', '--rate', help="sample rate",
-        dest='sample_rate', type=int, default=44100, action='store')
+        dest='sample_rate', type=int, default=44100)
 parser.add_argument('-w', '--waveform', help="sin|tri|saw|square",
-        dest='waveform', default='sin', action='store')
+        default='sin')
 parser.add_argument('-t', '--type', help="tone|constant|scale|slope|two-tone|two-tone-scale|delaytest|vibrato|random",
-        dest='type', default='tone', action='store')
+        default='tone')
 args = parser.parse_args()
 
 if args.feedback < 0.0 or args.feedback > 1.0:
