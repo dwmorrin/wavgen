@@ -26,5 +26,5 @@ optional arguments:
   -w WAVEFORM, --waveform WAVEFORM
                         sin|tri|saw|square
   -t TYPE, --type TYPE  tone|constant|scale|slope|two-tone|two-tone-
-                        scale|delaytest|vibrato
+                        scale|delaytest|vibrato|random
 ```

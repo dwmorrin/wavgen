@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """ generate .wav file containing test tone """
-from math import floor, pi, sin, asin, tan, atan
-from struct import pack
 import argparse
+from math import floor, pi, sin, asin, tan, atan
+import random
+from struct import pack
 import wave
 
 parser = argparse.ArgumentParser(
@@ -23,7 +24,7 @@ parser.add_argument('-r', '--rate', help="sample rate",
         dest='sample_rate', type=int, default=44100, action='store')
 parser.add_argument('-w', '--waveform', help="sin|tri|saw|square",
         dest='waveform', default='sin', action='store')
-parser.add_argument('-t', '--type', help="tone|constant|scale|slope|two-tone|two-tone-scale|delaytest|vibrato",
+parser.add_argument('-t', '--type', help="tone|constant|scale|slope|two-tone|two-tone-scale|delaytest|vibrato|random",
         dest='type', default='tone', action='store')
 args = parser.parse_args()
 
@@ -100,6 +101,20 @@ def ionian(sample_rate, loops, start_freq, note_duration, func=sin):
                     sample_rate, f, note_duration, func)
     return samples
 
+def random_melody(sample_rate, loops, duration):
+    def interval_ratio(interval):
+        return 2**(interval/12)
+    frequency = 440
+    samples = []
+    for i in range(loops):
+        frequency *= interval_ratio(random.randint(-18,18))
+        if frequency < 55:
+            frequency = 110
+        if frequency > 12000:
+            frequency = 880 * 2
+        samples += waveform(sample_rate, frequency, duration)
+    return samples
+
 def slope(wav_write, start, stop, n_samples):
     """ writes a series of samples with constant slope """
     inc = (stop - start) // n_samples
@@ -169,5 +184,7 @@ elif args.type == 'scale':
 elif args.type == 'delaytest':
     write_samples(wav_file, delay_test(
         args.sample_rate, args.loops, args.frequency, args.duration, args.delay, args.feedback))
+elif args.type == 'random':
+    write_samples(wav_file, random_melody(args.sample_rate, args.loops, args.duration))
 
 wav_file.close()
