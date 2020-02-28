@@ -23,7 +23,7 @@ parser.add_argument('-r', '--rate', help="sample rate",
         dest='sample_rate', type=int, default=44100, action='store')
 parser.add_argument('-w', '--waveform', help="sin|tri|saw|square",
         dest='waveform', default='sin', action='store')
-parser.add_argument('-t', '--type', help="tone|constant|scale|slope|two-tone|two-tone-scale|delaytest",
+parser.add_argument('-t', '--type', help="tone|constant|scale|slope|two-tone|two-tone-scale|delaytest|vibrato",
         dest='type', default='tone', action='store')
 args = parser.parse_args()
 
@@ -82,8 +82,8 @@ def waveform(sample_rate, frequency, duration, func=sin, fade_in_duration=0.01, 
         if sample >= n_fade_out_start:
             amplitude -= fade_out_dec
         mod = fm_amp * fm_func(sample*fm_freq*2*pi/sample_rate)
-        f = frequency + mod
-        samples.append(scale(func(sample*f*2*pi/sample_rate), amplitude))
+        value = func(sample*frequency*2*pi/sample_rate + mod)
+        samples.append(scale(value, amplitude))
     return samples
 
 def ionian(sample_rate, loops, start_freq, note_duration, func=sin):
@@ -153,7 +153,7 @@ if args.type == 'tone':
            waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform]))
 elif args.type == 'vibrato':
     write_samples(wav_file,
-           waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform], .01, .01, sin, .1, 8))
+           waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform], .01, .01, sin, .3, 8))
 elif args.type == 'two-tone':
     write_samples(wav_file,
            two_tone(args.sample_rate, args.frequency, args.duration, 5))
