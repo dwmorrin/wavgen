@@ -3,14 +3,17 @@
 Utility for generating .wav files.
 
 ```shell
-usage: wavgen.py [-h] [--delay DELAY] [-d DURATION] [--feedback FEEDBACK]
-                 [-f FREQUENCY] [-l LOOPS] [-o FILENAME] [-r SAMPLE_RATE]
-                 [-w WAVEFORM] [-t TYPE]
+usage: wavgen.py [-h] [-c CHANNELS] [--delay DELAY] [-d DURATION]
+                 [--feedback FEEDBACK] [-f FREQUENCY] [-l LOOPS] [-o FILENAME]
+                 [-r SAMPLE_RATE] [--sampwidth SAMPWIDTH] [-w WAVEFORM]
+                 [-t TYPE]
 
 Generate .wav file using direct digital synthesis
 
 optional arguments:
   -h, --help            show this help message and exit
+  -c CHANNELS, --channels CHANNELS
+                        channel count
   --delay DELAY         delay time
   -d DURATION, --duration DURATION
                         duration of tone
@@ -23,6 +26,8 @@ optional arguments:
                         output filename
   -r SAMPLE_RATE, --rate SAMPLE_RATE
                         sample rate
+  --sampwidth SAMPWIDTH
+                        sample width, 16 bit = 2
   -w WAVEFORM, --waveform WAVEFORM
                         sin|tri|saw|square
   -t TYPE, --type TYPE  tone|constant|scale|slope|two-tone|two-tone-

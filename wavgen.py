@@ -24,6 +24,8 @@ parser.add_argument('-o', '--output', help="output filename",
         dest='filename', default="tone.wav")
 parser.add_argument('-r', '--rate', help="sample rate",
         dest='sample_rate', type=int, default=44100)
+parser.add_argument('--sampwidth', help="sample width, 16 bit = 2",
+        type=int, default=2)
 parser.add_argument('-w', '--waveform', help="sin|tri|saw|square",
         default='sin')
 parser.add_argument('-t', '--type', help="tone|constant|scale|slope|two-tone|two-tone-scale|delaytest|vibrato|random",
@@ -40,6 +42,10 @@ def byte16(int):
     if int > MAX_VALUE or int < -MAX_VALUE:
         raise ValueError(str(int) + ' is beyond signed 16 bit range')
     return pack("<h", int)
+
+def interleave(*samples):
+    """ each samples arg is a list of ordered 1 channel samples """
+    return [sample for frame in zip(*samples) for sample in frame] 
 
 def scale(x, amplitude=0.5, master=0.8):
     return round(x * MAX_VALUE * amplitude * master)
@@ -63,9 +69,9 @@ sample      sample_rate samples             second        cycle
 def rads_per_sample(frequency, sample_rate):
     return frequency * 2 * pi / sample_rate
 
-def write_samples(wav_write, value_list):
-    """ write samples from a list """
-    for sample in value_list:
+def write_samples(wav_write, *sample_lists):
+    """ write samples from lists """
+    for sample in interleave(*sample_lists):
         wav_write.writeframesraw(byte16(sample))
 
 def waveform(sample_rate, frequency, duration, func=sin, fade_in_duration=0.01, fade_out_duration=0.01, fm_func=sin, fm_amp=0, fm_freq=8):
@@ -161,13 +167,14 @@ def delay_test(sample_rate, loops, start_frequency, note_duration, delay_time, f
     return delay(test, sample_rate, delay_time, feedback)
 
 wav_file = wave.open(args.filename, "wb")
-wav_file.setnchannels(1)
-wav_file.setsampwidth(2)
+wav_file.setnchannels(args.channels)
+wav_file.setsampwidth(args.sampwidth)
 wav_file.setframerate(args.sample_rate)
 
 if args.type == 'tone':
-    write_samples(wav_file,
-           waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform]))
+    tone = waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform])
+    samples = [tone[:] for channels in range(args.channels)]
+    write_samples(wav_file, *samples)
 elif args.type == 'vibrato':
     write_samples(wav_file,
            waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform], .01, .01, sin, .3, 8))
