@@ -77,25 +77,59 @@ def write_samples(wav_write, *sample_lists):
     for sample in interleave(*sample_lists):
         wav_write.writeframesraw(byte16(sample))
 
-def waveform(sample_rate, frequency, duration, func=sin, fade_in_duration=0.01, fade_out_duration=0.01, fm_func=sin, fm_amp=0, fm_freq=8):
+def adsr(sample_rate, attack, decay, sustain_time, sustain_level, release):
+    """ simple envelope generator
+    a,d,sus_time,r paramters are in seconds, sustain_level in 0,1 range
+    returns list of values in range (0,1)
+    """
+    if sustain_level < 0 or sustain_level > 1:
+        raise ValueError("sustain level out of range [0,1]")
+    def samples(time):
+        return sample_rate * time
+    def inc(time):
+        return 1 / samples(time)
+    env = []
+    if attack == 0:
+        value = 1
+    else:
+        value = 0
+        attack_inc = inc(attack)
+    while value < 1:
+        env.append(value)
+        value += attack_inc
+        if value > 1:
+            value = 1
+    if decay == 0:
+        value = sustain_level
+    else:
+        decay_dec = inc(decay)
+    while value > sustain_level:
+        env.append(value)
+        value -= decay_dec
+        if value < sustain_level:
+            value = sustain_level
+    if sustain_level == 0:
+        return env
+    for s in range(int(samples(sustain_time))):
+        env.append(value)
+    if value == 0 or release == 0:
+        return env
+    release_dec = inc(release)
+    while value > 0:
+        env.append(value)
+        value -= release_dec
+        if value < 0:
+            value = 0
+    return env
+
+def waveform(sample_rate, frequency, duration, func=sin, fm_func=sin, fm_amp=0, fm_freq=8):
     """ returns a list of function values at a fixed frequency with fade in/out """
     n_samples = int(sample_rate * duration)
-    n_fade_in_end = int(sample_rate * fade_in_duration)
-    n_fade_out_samples = int(sample_rate * fade_out_duration)
-    n_fade_out_start = n_samples - n_fade_out_samples
-    
-    amplitude = 0.0
-    fade_in_inc = 1/float(n_fade_in_end)
-    fade_out_dec = 1/float(n_fade_out_samples)
     samples = []
     for sample in range(n_samples):
-        if sample <= n_fade_in_end:
-            amplitude += fade_in_inc
-        if sample >= n_fade_out_start:
-            amplitude -= fade_out_dec
         mod = fm_amp * fm_func(sample*fm_freq*2*pi/sample_rate)
         value = func(sample*frequency*2*pi/sample_rate + mod)
-        samples.append(scale(value, amplitude))
+        samples.append(scale(value, 1))
     return samples
 
 def ionian(sample_rate, loops, start_freq, note_duration, func=sin):
@@ -176,6 +210,11 @@ wav_file.setframerate(args.sample_rate)
 
 if args.type == 'tone':
     tone = waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform])
+    env = adsr(args.sample_rate, 0.01, 0, args.duration - 0.02, 1, 0.01)
+    if len(tone) != len(env):
+        raise ValueError("env length mismatch")
+    for i in range(len(tone)):
+        tone[i] = round(tone[i] * env[i])
     samples = [tone[:] for channels in range(args.channels)]
     write_samples(wav_file, *samples)
 elif args.type == 'vibrato':
