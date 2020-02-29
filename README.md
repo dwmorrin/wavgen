@@ -1,6 +1,6 @@
-### wavegen
+### wavgen
 
-Utility for generating .wav files.
+Utility for generating .wav files with direct digital synthesis.
 
 ```shell
 usage: wavgen.py [-h] [-c CHANNELS] [--delay DELAY] [-d DURATION]
@@ -29,7 +29,7 @@ optional arguments:
   --sampwidth SAMPWIDTH
                         sample width, 16 bit = 2
   -w WAVEFORM, --waveform WAVEFORM
-                        sin|tri|saw|square
+                        sin|tri|saw|square|noise
   -t TYPE, --type TYPE  tone|constant|scale|slope|two-tone|two-tone-
                         scale|delaytest|vibrato|random
 ```

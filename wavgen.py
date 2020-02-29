@@ -26,7 +26,7 @@ parser.add_argument('-r', '--rate', help="sample rate",
         dest='sample_rate', type=int, default=44100)
 parser.add_argument('--sampwidth', help="sample width, 16 bit = 2",
         type=int, default=2)
-parser.add_argument('-w', '--waveform', help="sin|tri|saw|square",
+parser.add_argument('-w', '--waveform', help="sin|tri|saw|square|noise",
         default='sin')
 parser.add_argument('-t', '--type', help="tone|constant|scale|slope|two-tone|two-tone-scale|delaytest|vibrato|random",
         default='tone')
@@ -46,11 +46,14 @@ def byte16(int):
 def interleave(*samples):
     """ each samples arg is a list of ordered 1 channel samples """
     return [sample for frame in zip(*samples) for sample in frame] 
-
 def scale(x, amplitude=0.5, master=0.8):
     return round(x * MAX_VALUE * amplitude * master)
 
 # waveform functions return float in range (-1.0,1.0)
+def noise(x):
+    """ takes arg for comptability with other funcs only """
+    return random.uniform(-1, 1)
+
 def saw(x):
     return (2/pi) * atan(tan(x))
 
