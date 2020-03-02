@@ -203,6 +203,19 @@ def delay_test(sample_rate, loops, start_frequency, note_duration, delay_time, f
     test = ionian(sample_rate, loops, start_frequency, note_duration)
     return delay(test, sample_rate, delay_time, feedback)
 
+def env_test(sample_rate, frequency, duration, func):
+    tone = waveform(sample_rate, frequency, duration, func)
+    quarter_time = 0.25 * duration
+    sustain_time = duration - 3*quarter_time
+    env = adsr(sample_rate, quarter_time, quarter_time, sustain_time, 0.3, quarter_time)
+    if len(tone) != len(env):
+        raise ValueError("env length {} mismatch tone {}".format(len(env), len(tone)))
+    for i in range(len(tone)):
+        tone[i] = round(tone[i] * env[i])
+    return tone
+
+# end defs; begin script
+
 wav_file = wave.open(args.filename, "wb")
 wav_file.setnchannels(args.channels)
 wav_file.setsampwidth(args.sampwidth)
@@ -212,9 +225,13 @@ if args.type == 'tone':
     tone = waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform])
     env = adsr(args.sample_rate, 0.01, 0, args.duration - 0.02, 1, 0.01)
     if len(tone) != len(env):
-        raise ValueError("env length mismatch")
+        raise ValueError("env length {} mismatch tone {}".format(len(env), len(tone)))
     for i in range(len(tone)):
         tone[i] = round(tone[i] * env[i])
+    samples = [tone[:] for channels in range(args.channels)]
+    write_samples(wav_file, *samples)
+elif args.type == 'env':
+    tone = env_test(args.sample_rate, args.frequency, args.duration, globals()[args.waveform])
     samples = [tone[:] for channels in range(args.channels)]
     write_samples(wav_file, *samples)
 elif args.type == 'vibrato':
