@@ -63,6 +63,21 @@ def square(x):
 def tri(x):
     return (2/pi) * asin(sin(x))
 
+def adsr(t, attack_time, decay_time, sustain_time, sustain_level, release_time):
+    """ periodic ADSR envelope generator """
+    if sustain_level < 0 or sustain_level > 1:
+        raise ValueError("sustain_level out of range [0,1]")
+    period = attack_time + decay_time + sustain_time + release_time
+    t %= period
+    if t < attack_time:
+        return (1/attack_time)*(t-attack_time)+1
+    if t < attack_time + decay_time:
+        return ((sustain_level-1)/decay_time)*(t-attack_time)+1
+    if t < attack_time + decay_time + sustain_time:
+        return sustain_level
+    release_start = attack_time + decay_time + sustain_time
+    return (-sustain_level/release_time)*(t-release_start) + sustain_level
+
 """
 radians               1 second    frequency cycles    2pi radians
 -------- = -------------------- x ---------------- x  -----------
@@ -77,50 +92,22 @@ def write_samples(wav_write, *sample_lists):
     for sample in interleave(*sample_lists):
         wav_write.writeframesraw(byte16(sample))
 
-def adsr(sample_rate, attack, decay, sustain_time, sustain_level, release):
-    """ simple envelope generator
-    a,d,sus_time,r paramters are in seconds, sustain_level in 0,1 range
-    returns list of values in range (0,1)
-    """
-    if sustain_level < 0 or sustain_level > 1:
-        raise ValueError("sustain level out of range [0,1]")
-    def samples(time):
-        return sample_rate * time
-    def inc(time):
-        return 1 / samples(time)
-    env = []
-    if attack == 0:
-        value = 1
-    else:
-        value = 0
-        attack_inc = inc(attack)
-    while value < 1:
-        env.append(value)
-        value += attack_inc
-        if value > 1:
-            value = 1
-    if decay == 0:
-        value = sustain_level
-    else:
-        decay_dec = inc(decay)
-    while value > sustain_level:
-        env.append(value)
-        value -= decay_dec
-        if value < sustain_level:
-            value = sustain_level
-    if sustain_level == 0:
-        return env
-    for s in range(int(samples(sustain_time))):
-        env.append(value)
-    if value == 0 or release == 0:
-        return env
-    release_dec = inc(release)
-    while value > 0:
-        env.append(value)
-        value -= release_dec
-        if value < 0:
-            value = 0
-    return env
+def envelope(samples, sample_rate, attack, decay, sustain, sustain_level, release):
+    """ apply envelope to samples """
+    if attack + decay + sustain + release != 1:
+        raise ValueError("ADSR time fractions should add to 1")
+    enveloped = samples[:]
+    nsamples = len(samples)
+    attack *= nsamples
+    decay *= nsamples
+    sustain *= nsamples
+    release *= nsamples
+    print(attack, decay, sustain, release)
+    for i, value in enumerate(samples):
+        enveloped[i] *= adsr(i, attack, decay, sustain, sustain_level, release)
+        enveloped[i] = int(enveloped[i])
+    return enveloped
+
 
 def waveform(sample_rate, frequency, duration, func=sin, fm_func=sin, fm_amp=0, fm_freq=8):
     """ returns a list of function values at a fixed frequency with fade in/out """
@@ -205,14 +192,7 @@ def delay_test(sample_rate, loops, start_frequency, note_duration, delay_time, f
 
 def env_test(sample_rate, frequency, duration, func):
     tone = waveform(sample_rate, frequency, duration, func)
-    quarter_time = 0.25 * duration
-    sustain_time = duration - 3*quarter_time
-    env = adsr(sample_rate, quarter_time, quarter_time, sustain_time, 0.3, quarter_time)
-    if len(tone) != len(env):
-        raise ValueError("env length {} mismatch tone {}".format(len(env), len(tone)))
-    for i in range(len(tone)):
-        tone[i] = round(tone[i] * env[i])
-    return tone
+    return envelope(tone, sample_rate, .25, .25, .25, .25, .25)
 
 # end defs; begin script
 
@@ -223,9 +203,7 @@ wav_file.setframerate(args.sample_rate)
 
 if args.type == 'tone':
     tone = waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform])
-    env = adsr(args.sample_rate, 0.01, 0, args.duration - 0.02, 1, 0.01)
-    if len(tone) != len(env):
-        raise ValueError("env length {} mismatch tone {}".format(len(env), len(tone)))
+    env = envelope(args.sample_rate, 0.01, 0, args.duration - 0.02, 1, 0.01)
     for i in range(len(tone)):
         tone[i] = round(tone[i] * env[i])
     samples = [tone[:] for channels in range(args.channels)]
