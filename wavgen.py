@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """ generate .wav file containing test tone """
 import argparse
+from collections import namedtuple
 from math import floor, pi, sin, asin, tan, atan
 import random
 from struct import pack
@@ -49,6 +50,9 @@ def interleave(*samples):
 def scale(x, amplitude=0.5, master=0.8):
     return round(x * MAX_VALUE * amplitude * master)
 
+# namedtuples for easier passing of parameters
+ADSR_ctrl = namedtuple('ADSR_ctrl', 'attack decay sustain sustain_level release')
+
 # waveform functions return float in range (-1.0,1.0)
 def noise(x):
     """ takes arg for comptability with other funcs only """
@@ -63,20 +67,20 @@ def square(x):
 def tri(x):
     return (2/pi) * asin(sin(x))
 
-def adsr(t, attack_time, decay_time, sustain_time, sustain_level, release_time):
+def adsr(t, ctrl):
     """ periodic ADSR envelope generator """
-    if sustain_level < 0 or sustain_level > 1:
+    if ctrl.sustain_level < 0 or ctrl.sustain_level > 1:
         raise ValueError("sustain_level out of range [0,1]")
-    period = attack_time + decay_time + sustain_time + release_time
+    period = ctrl.attack + ctrl.decay + ctrl.sustain + ctrl.release
     t %= period
-    if t < attack_time:
-        return (1/attack_time)*(t-attack_time)+1
-    if t < attack_time + decay_time:
-        return ((sustain_level-1)/decay_time)*(t-attack_time)+1
-    if t < attack_time + decay_time + sustain_time:
-        return sustain_level
-    release_start = attack_time + decay_time + sustain_time
-    return (-sustain_level/release_time)*(t-release_start) + sustain_level
+    if t < ctrl.attack:
+        return (1/ctrl.attack)*(t-ctrl.attack)+1
+    if t < ctrl.attack + ctrl.decay:
+        return ((ctrl.sustain_level-1)/ctrl.decay)*(t-ctrl.attack)+1
+    if t < ctrl.attack + ctrl.decay + ctrl.sustain:
+        return ctrl.sustain_level
+    release_start = ctrl.attack + ctrl.decay + ctrl.sustain
+    return (-ctrl.sustain_level/ctrl.release)*(t-release_start) + ctrl.sustain_level
 
 """
 radians               1 second    frequency cycles    2pi radians
@@ -92,18 +96,19 @@ def write_samples(wav_write, *sample_lists):
     for sample in interleave(*sample_lists):
         wav_write.writeframesraw(byte16(sample))
 
-def envelope(samples, sample_rate, attack, decay, sustain, sustain_level, release):
+def envelope(samples, sample_rate, ctrl):
     """ apply envelope to samples """
-    if attack + decay + sustain + release != 1:
+    if ctrl.attack + ctrl.decay + ctrl.sustain + ctrl.release != 1:
         raise ValueError("ADSR time fractions should add to 1")
     enveloped = samples[:]
     nsamples = len(samples)
-    attack *= nsamples
-    decay *= nsamples
-    sustain *= nsamples
-    release *= nsamples
+    ctrl_in_samples = ADSR_ctrl(
+            ctrl.attack * nsamples, ctrl.decay * nsamples,
+            ctrl.sustain * nsamples, ctrl.sustain_level,
+            ctrl.release * nsamples
+            )
     for i, value in enumerate(samples):
-        enveloped[i] *= adsr(i, attack, decay, sustain, sustain_level, release)
+        enveloped[i] *= adsr(i, ctrl_in_samples)
         enveloped[i] = int(enveloped[i])
     return enveloped
 
@@ -191,7 +196,8 @@ def delay_test(sample_rate, loops, start_frequency, note_duration, delay_time, f
 
 def env_test(sample_rate, frequency, duration, func):
     tone = waveform(sample_rate, frequency, duration, func)
-    return envelope(tone, sample_rate, .25, .25, .25, .25, .25)
+    env = ADSR_ctrl(.25, .25, .25, .25, .25)
+    return envelope(tone, sample_rate, env)
 
 # end defs; begin script
 
@@ -202,10 +208,9 @@ wav_file.setframerate(args.sample_rate)
 
 if args.type == 'tone':
     tone = waveform(args.sample_rate, args.frequency, args.duration, globals()[args.waveform])
-    env = envelope(args.sample_rate, 0.01, 0, args.duration - 0.02, 1, 0.01)
-    for i in range(len(tone)):
-        tone[i] = round(tone[i] * env[i])
-    samples = [tone[:] for channels in range(args.channels)]
+    ctrl = ADSR_ctrl(0.01, 0, args.duration - 0.02, 1, 0.01)
+    enveloped = envelope(tone, args.sample_rate, env)
+    samples = [enveloped[:] for channels in range(args.channels)]
     write_samples(wav_file, *samples)
 elif args.type == 'env':
     tone = env_test(args.sample_rate, args.frequency, args.duration, globals()[args.waveform])
