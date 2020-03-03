@@ -102,7 +102,6 @@ def envelope(samples, sample_rate, attack, decay, sustain, sustain_level, releas
     decay *= nsamples
     sustain *= nsamples
     release *= nsamples
-    print(attack, decay, sustain, release)
     for i, value in enumerate(samples):
         enveloped[i] *= adsr(i, attack, decay, sustain, sustain_level, release)
         enveloped[i] = int(enveloped[i])
