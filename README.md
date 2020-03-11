@@ -6,9 +6,12 @@ Utility for generating .wav files with direct digital synthesis.
 usage: wavgen.py [-h] [-c CHANNELS] [--delay DELAY] [-d DURATION]
                  [--feedback FEEDBACK] [-f FREQUENCY] [-l LOOPS] [-o FILENAME]
                  [-r SAMPLE_RATE] [--sampwidth SAMPWIDTH] [-w WAVEFORM]
-                 [-t TYPE]
+                 program
 
 Generate .wav file using direct digital synthesis
+
+positional arguments:
+  program               see examples.py for choices
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -30,6 +33,4 @@ optional arguments:
                         sample width, 16 bit = 2
   -w WAVEFORM, --waveform WAVEFORM
                         sin|tri|saw|square|noise
-  -t TYPE, --type TYPE  tone|constant|scale|slope|two-tone|two-tone-
-                        scale|delaytest|vibrato|random
 ```

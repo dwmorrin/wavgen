@@ -18,7 +18,7 @@ parser.add_argument('-o', '--output', help="output filename", dest='filename', d
 parser.add_argument('-r', '--rate', help="sample rate", dest='sample_rate', type=int, default=44100)
 parser.add_argument('--sampwidth', help="sample width, 16 bit = 2", type=int, default=2)
 parser.add_argument('-w', '--waveform', help="sin|tri|saw|square|noise", default='sin')
-parser.add_argument('program')
+parser.add_argument('program', help="see examples.py for choices")
 args = parser.parse_args()
 
 wav_file = wave.open(args.filename, "wb")
