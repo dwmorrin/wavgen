@@ -139,9 +139,9 @@ def two_tone_ionian(sample_rate, frequency, duration):
     return samples
 
 
-def delay_test(sample_rate, loops, start_frequency, note_duration, delay_time, feedback):
+def delay_test(sample_rate, loops, start_frequency, note_duration, delay_time, feedback, waveform):
     """ test of delay effect """
-    osc = Oscillator(sin, start_frequency)
+    osc = Oscillator(waveform, start_frequency)
     test = ionian(loops, note_duration, osc)
     eg = EnvelopeGenerator(len(test)/sample_rate)
     return eg.amplitude(delay(test, sample_rate, delay_time, feedback))
