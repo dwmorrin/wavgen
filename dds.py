@@ -121,6 +121,6 @@ def delay(samples, sample_rate, time, feedback=0):
         playback_head = (record_head + 1) % sample_delay
         delay_ring[record_head] = mix[i] + int(delay_ring[playback_head] * feedback)
         mix[i] += delay_ring[playback_head]
-        mix[i] //= 2
+        mix[i] //= 4
         record_head = playback_head
     return mix
